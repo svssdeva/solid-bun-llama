@@ -7,15 +7,6 @@ const Loader = lazy(() => import('../components/Loading/Loading'))
 const ollama = new Ollama({host: "http://localhost:11434"});
 
 const response = async (messages: { sender: "user" | "bot"; text: string }[]) => {
-    if (messages.length === 0) {
-        const chatResponse = await ollama.chat({
-            model: "llama2",
-            messages: messages.map(({sender, text}) => ({role: "user", content: text})),
-            stream: false,
-        });
-
-        return chatResponse?.message?.content || "";
-    }
     const lastMessage = messages[messages.length - 1];
     if (lastMessage && lastMessage.sender === "user") {
         const chatResponse = await ollama.chat({
@@ -61,7 +52,14 @@ export default function ChatPage() {
     createResource(botResponse, (response) => {
         if (response) {
             batch(() => {
-                setMessages([...messages(), {sender: "bot", text: response}]);
+                const updatedMessages: { sender: "user" | "bot", text: string }[] = [...messages(), {
+                    sender: "bot",
+                    text: response
+                }];
+                setMessages(updatedMessages);
+                if (typeof localStorage !== "undefined") {
+                    localStorage.setItem("messages", JSON.stringify(updatedMessages));
+                }
                 setIsLoading(false);
             });
         }
