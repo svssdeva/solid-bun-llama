@@ -1,4 +1,5 @@
-import { createSignal } from "solid-js";
+import {createSignal} from "solid-js";
+import './ChatInput.css';
 
 interface ChatInputProps {
     onSubmit: (message: string) => void;
@@ -14,17 +15,17 @@ const ChatInput = (props: ChatInputProps) => {
     };
 
     return (
-        <form onSubmit={handleSubmit} class="flex items-center space-x-2">
+        <form onSubmit={handleSubmit} class="form">
             <input
                 type="text"
                 value={inputValue()}
                 onInput={(e) => setInputValue(e.currentTarget.value)}
-                class="flex-grow px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="input"
                 placeholder="Type your message..."
             />
             <button
                 type="submit"
-                class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="button"
             >
                 Send
             </button>
