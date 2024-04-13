@@ -1,4 +1,4 @@
-import {batch, createResource, createSignal, lazy} from "solid-js";
+import {batch, createResource, createSignal, lazy, onMount} from "solid-js";
 import {Ollama} from "ollama";
 import ChatInput from "../components/ChatInput/ChatInput";
 import './chat.css';
@@ -32,12 +32,29 @@ const response = async (messages: { sender: "user" | "bot"; text: string }[]) =>
 export default function ChatPage() {
     const [isLoading, setIsLoading] = createSignal(false);
     const [messages, setMessages] = createSignal<{ sender: "user" | "bot"; text: string }[]>([]);
+
+    onMount(() => {
+        if (typeof localStorage !== "undefined") {
+            const storedMessages = localStorage.getItem("messages");
+            if (storedMessages) {
+                setMessages(JSON.parse(storedMessages));
+            }
+        }
+    });
+
     const [botResponse] = createResource(messages, response);
 
     const handleSubmit = (message: string) => {
         setIsLoading(true);
         batch(() => {
-            setMessages([...messages(), {sender: "user", text: message}]);
+            const newMessages: { sender: "user" | "bot", text: string }[] = [...messages(), {
+                sender: "user",
+                text: message
+            }];
+            setMessages(newMessages);
+            if (typeof localStorage !== "undefined") {
+                localStorage.setItem("messages", JSON.stringify(newMessages));
+            }
         });
     };
 
@@ -51,20 +68,27 @@ export default function ChatPage() {
     });
 
     return (
-        <div class="container">
+        <div class="chat-container">
             {isLoading() ? (
                 <Loader/>
             ) : (
                 <>
                     <div class="chat-history">
                         <div class="chat-messages">
-                            {messages().map((message, index) => (
-                                <div
-                                    class={`message ${message.sender === "user" ? "user-message" : "bot-message"}`}
-                                >
-                                    {message.text}
-                                </div>
-                            ))}
+                            {messages().map((message, index) => {
+                                const parts = message.text.split(/(`[^`]*`)/g);
+                                return (
+                                    <div
+                                        class={`message ${message.sender === "user" ? "user-message" : "bot-message"}`}
+                                    >
+                                        {parts.map(part => part.startsWith('`') && part.endsWith('`') ? (
+                                            <pre><code>{part.slice(1, -1)}</code></pre>
+                                        ) : (
+                                            part
+                                        ))}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                     <div class="chat-input">
