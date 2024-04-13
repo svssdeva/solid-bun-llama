@@ -1,8 +1,9 @@
-import {createResource, createSignal} from "solid-js";
+import {batch, createResource, createSignal, lazy} from "solid-js";
 import {Ollama} from "ollama";
 import ChatInput from "../components/ChatInput/ChatInput";
 import './chat.css';
 
+const Loader = lazy(() => import('../components/Loading/Loading'))
 const ollama = new Ollama({host: "http://localhost:11434"});
 
 const response = async (messages: { sender: "user" | "bot"; text: string }[]) => {
@@ -29,35 +30,48 @@ const response = async (messages: { sender: "user" | "bot"; text: string }[]) =>
 };
 
 export default function ChatPage() {
+    const [isLoading, setIsLoading] = createSignal(false);
     const [messages, setMessages] = createSignal<{ sender: "user" | "bot"; text: string }[]>([]);
     const [botResponse] = createResource(messages, response);
 
     const handleSubmit = (message: string) => {
-        setMessages([...messages(), {sender: "user", text: message}]);
+        setIsLoading(true);
+        batch(() => {
+            setMessages([...messages(), {sender: "user", text: message}]);
+        });
     };
 
     createResource(botResponse, (response) => {
         if (response) {
-            setMessages([...messages(), {sender: "bot", text: response}]);
+            batch(() => {
+                setMessages([...messages(), {sender: "bot", text: response}]);
+                setIsLoading(false);
+            });
         }
     });
 
     return (
         <div class="container">
-            <div class="chat-history">
-                <div class="chat-messages">
-                    {messages().map((message, index) => (
-                        <div
-                            class={`message ${message.sender === "user" ? "user-message" : "bot-message"}`}
-                        >
-                            {message.text}
+            {isLoading() ? (
+                <Loader/>
+            ) : (
+                <>
+                    <div class="chat-history">
+                        <div class="chat-messages">
+                            {messages().map((message, index) => (
+                                <div
+                                    class={`message ${message.sender === "user" ? "user-message" : "bot-message"}`}
+                                >
+                                    {message.text}
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-            </div>
-            <div class="chat-input">
-                <ChatInput onSubmit={handleSubmit}/>
-            </div>
+                    </div>
+                    <div class="chat-input">
+                        <ChatInput onSubmit={handleSubmit}/>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
